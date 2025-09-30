@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+venvPython="./venv/bin/python"
+flake8="./venv/bin/flake8"
+black="./venv/bin/black"
+
+if [ ! -x "$venvPython" ]; then
+  echo "Virtual environment not found. Please run install first." >&2
+  exit 1
+fi
+
+echo "Running Black formatter..."
+"$black" src/
+
+echo "Running Flake8 linter..."
+"$flake8" src/
+
+echo "All checks passed!"

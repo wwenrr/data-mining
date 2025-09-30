@@ -13,6 +13,8 @@ A simple CLI tool to fetch cryptocurrency candlestick (kline) data from Binance 
   - [Basic Commands](#basic-commands)
   - [Command Options](#command-options)
   - [Examples](#examples)
+- [Development](#development)
+  - [Code Quality](#code-quality)
 - [Output](#output)
 - [Project Structure](#project-structure)
 
@@ -91,6 +93,46 @@ chmod +x scripts/linux/install scripts/linux/run
 # Get 10 daily candles for ADA/USDT from 30 days ago
 .\scripts\win\run.ps1 -s ADAUSDT -i 1d -l 10 -d 30
 ```
+
+## Development
+
+### Code Quality
+
+This project uses `flake8` for linting and `black` for code formatting.
+
+**Local Development:**
+
+**Windows:**
+
+```powershell
+# Run linter and formatter
+.\scripts\win\lint.ps1
+```
+
+**Linux:**
+
+```bash
+# Make script executable first
+chmod +x scripts/linux/lint
+
+# Run linter and formatter
+./scripts/linux/lint
+```
+
+**Continuous Integration:**
+
+The project uses GitHub Actions to automatically check code quality on Pull Requests:
+
+- Runs Flake8 linting on all Python files in `src/`
+- Checks Black formatting compliance
+- Only triggers on PRs targeting `main`/`master` branches
+- Only runs when Python files are modified
+
+The linter will:
+
+1. Auto-format code with Black
+2. Check code style with Flake8
+3. Report any issues that need manual fixing
 
 ## Output
 
