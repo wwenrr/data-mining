@@ -123,10 +123,12 @@ chmod +x scripts/linux/lint
 
 The project uses GitHub Actions to automatically check code quality on Pull Requests:
 
+- Uses Python 3.13 for compatibility with latest packages
 - Runs Flake8 linting on all Python files in `src/`
 - Checks Black formatting compliance
 - Only triggers on PRs targeting `main`/`master` branches
 - Only runs when Python files are modified
+- Can also be triggered manually via GitHub Actions tab
 
 The linter will:
 
