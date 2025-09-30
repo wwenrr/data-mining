@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+lib="${1:-}"
+
+# Check if python3 is installed
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 is not installed or not in PATH." >&2
+  exit 1
+fi
+
+# Check if venv module exists
+if ! python3 -m venv --help >/dev/null 2>&1; then
+  echo "venv not found, installing virtualenv..."
+  python3 -m pip install --upgrade pip
+  python3 -m pip install virtualenv
+fi
+
+# Create virtual environment if missing
+if [ ! -d "./venv" ]; then
+  echo "Creating virtual environment..."
+  python3 -m venv venv
+fi
+
+venvPath="./venv"
+pythonExe="$venvPath/bin/python"
+pipExe="$venvPath/bin/pip"
+
+"$pythonExe" -m pip install --upgrade pip
+
+if [ -n "$lib" ]; then
+  echo "Installing library: $lib"
+  "$pipExe" install "$lib"
+
+  "$pipExe" freeze > req.txt
+else
+  if [ ! -f req.txt ]; then
+    echo "req.txt not found. Creating empty req.txt..."
+    touch req.txt
+  fi
+
+  echo "Installing from req.txt..."
+  "$pipExe" install -r req.txt
+fi
