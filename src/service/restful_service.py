@@ -7,9 +7,13 @@ from decorator.singleton import singleton
 
 @singleton
 class RestfulService:
-    def __init__(self, default_timeout: int = 30):
-        self.default_timeout = default_timeout
+    def __init__(self):
+        self.default_timeout = 30
         self.logger = logging.getLogger(__name__)
+
+    def set_default_timeout(self, timeout: int):
+        self.default_timeout = timeout
+        return self
 
     def _make_request(
         self,
