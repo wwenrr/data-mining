@@ -3,8 +3,7 @@ $venvPython = ".\venv\Scripts\python.exe"
 
 $versionOutput = & $venvPython --version
 if ($versionOutput -notmatch "Python 3\.13\.7") {
-    Write-Error "Incorrect Python version. Expected Python 3.13.7, but got: $versionOutput"
-    exit 1
+    Write-Error "Warning Python version deprecated. Expected Python 3.13.7, but got: $versionOutput"
 }
 
 if (-not (Test-Path $venvPython)) {
