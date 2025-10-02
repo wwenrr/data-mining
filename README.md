@@ -12,6 +12,7 @@ A simple CLI tool to fetch cryptocurrency candlestick (kline) data from Binance 
 - [Usage](#usage)
   - [Dataset Commands](#dataset-commands)
   - [Analysis Commands](#analysis-commands)
+  - [Training Commands](#training-commands)
   - [Command Options](#command-options)
   - [Examples](#examples)
 - [Development](#development)
@@ -30,6 +31,9 @@ This tool provides a clean interface to fetch cryptocurrency market data from Bi
 - Historical data support (fetch data from X days ago)
 - Automatic data saving to JSON files
 - Analyze saved kline data with comprehensive statistics
+- Train machine learning models on cryptocurrency data
+- Price prediction using Linear Regression or Random Forest models
+- Model evaluation with detailed metrics (RMSE, MAE, R²)
 - Price analysis (current, change, range)
 - Volume analysis (total, average)
 - Time range analysis
@@ -89,6 +93,22 @@ Analyze saved cryptocurrency data:
 ./scripts/linux/run analyze -c <CRYPTO>
 ```
 
+### Training Commands
+
+Train machine learning models on saved cryptocurrency data:
+
+**Windows:**
+
+```powershell
+.\scripts\win\run.ps1 train -c <CRYPTO> -m <MODEL_TYPE> [-lb <LOOKBACK>] [-ts <TEST_SIZE>]
+```
+
+**Linux:**
+
+```bash
+./scripts/linux/run train -c <CRYPTO> -m <MODEL_TYPE> [-lb <LOOKBACK>] [-ts <TEST_SIZE>]
+```
+
 ### Command Options
 
 **Dataset Command:**
@@ -105,6 +125,15 @@ Analyze saved cryptocurrency data:
 | Option     | Short | Description                        | Required | Default |
 | ---------- | ----- | ---------------------------------- | -------- | ------- |
 | `--crypto` | `-c`  | Crypto name to analyze (e.g., BTC) | Yes      | -       |
+
+**Train Command:**
+
+| Option        | Short | Description                                   | Required | Default |
+| ------------- | ----- | --------------------------------------------- | -------- | ------- |
+| `--crypto`    | `-c`  | Crypto name to train on (e.g., BTC, ETH)      | Yes      | -       |
+| `--model`     | `-m`  | Model type: 'linear' or 'random_forest'       | No       | linear  |
+| `--lookback`  | `-lb` | Number of periods to look back for features   | No       | 5       |
+| `--test-size` | `-ts` | Proportion of data for testing (0.0-1.0)      | No       | 0.2     |
 
 **Supported Intervals:**
 `1m`, `5m`, `15m`, `30m`, `1h`, `2h`, `4h`, `6h`, `8h`, `12h`, `1d`, `3d`, `1w`, `1M`
@@ -138,6 +167,19 @@ Analyze saved cryptocurrency data:
 
 # Analyze any available crypto
 .\scripts\win\run.ps1 analyze -c ADA
+```
+
+**Training Models:**
+
+```powershell
+# Train a linear regression model on BTC data
+.\scripts\win\run.ps1 train -c BTC -m linear
+
+# Train a random forest model on ETH data with custom lookback
+.\scripts\win\run.ps1 train -c ETH -m random_forest -lb 10
+
+# Train with custom test size
+.\scripts\win\run.ps1 train -c BTC -m linear -lb 5 -ts 0.3
 ```
 
 ## Development
@@ -218,6 +260,44 @@ The linter will:
 2025-09-30 19:34:22,526 - INFO - Data fetched: 2025-09-30T18:46:34
 ```
 
+### Train Command Output
+
+```
+2025-10-02 10:31:41,882 - INFO - Starting model training for BTC...
+2025-10-02 10:31:41,882 - INFO - ==================================================
+2025-10-02 10:31:41,882 - INFO - Loading data for BTC...
+2025-10-02 10:31:41,883 - INFO - Loaded kline data for BTC
+2025-10-02 10:31:41,883 - INFO - Preparing features with lookback=5...
+2025-10-02 10:31:41,883 - INFO - Feature shape: (25, 25), Target shape: (25,)
+2025-10-02 10:31:41,884 - INFO - Training linear model...
+2025-10-02 10:31:41,885 - INFO - Evaluating model...
+2025-10-02 10:31:41,888 - INFO - Model saved to: data/models/btc_linear_model.joblib
+2025-10-02 10:31:41,888 - INFO - Scaler saved to: data/models/btc_linear_scaler.joblib
+2025-10-02 10:31:41,888 - INFO - Metadata saved to: data/models/btc_linear_metadata.json
+2025-10-02 10:31:41,888 - INFO -
+2025-10-02 10:31:41,888 - INFO - Training completed successfully!
+2025-10-02 10:31:41,888 - INFO - ==================================================
+2025-10-02 10:31:41,888 - INFO - Model: linear
+2025-10-02 10:31:41,888 - INFO - Crypto: BTC
+2025-10-02 10:31:41,888 - INFO - Lookback: 5 periods
+2025-10-02 10:31:41,888 - INFO - Feature dimensions: 25
+2025-10-02 10:31:41,888 - INFO -
+2025-10-02 10:31:41,888 - INFO - Training Set Metrics:
+2025-10-02 10:31:41,888 - INFO -   Samples: 20
+2025-10-02 10:31:41,889 - INFO -   RMSE: $0.0000
+2025-10-02 10:31:41,889 - INFO -   MAE: $0.0000
+2025-10-02 10:31:41,889 - INFO -   R² Score: 1.0000
+2025-10-02 10:31:41,889 - INFO -
+2025-10-02 10:31:41,889 - INFO - Test Set Metrics:
+2025-10-02 10:31:41,889 - INFO -   Samples: 5
+2025-10-02 10:31:41,889 - INFO -   RMSE: $0.0000
+2025-10-02 10:31:41,889 - INFO -   MAE: $0.0000
+2025-10-02 10:31:41,889 - INFO -   R² Score: 1.0000
+2025-10-02 10:31:41,889 - INFO -
+2025-10-02 10:31:41,889 - INFO - Model saved to: data/models/btc_linear_model.joblib
+2025-10-02 10:31:41,889 - INFO - Scaler saved to: data/models/btc_linear_scaler.joblib
+```
+
 ### File Output
 
 Data is automatically saved to `data/kline/<crypto>.json`:
@@ -270,7 +350,8 @@ Each kline contains:
 ```
 data-mining/
 ├── data/
-│   └── kline/              # Auto-generated JSON files
+│   ├── kline/              # Auto-generated JSON files for kline data
+│   └── models/             # Auto-generated trained models and metadata
 ├── scripts/
 │   ├── win/
 │   │   ├── install.ps1     # Windows installation script
@@ -282,13 +363,15 @@ data-mining/
 │   ├── commands/
 │   │   ├── __init__.py
 │   │   ├── dataset.py      # Dataset command implementation
-│   │   └── analyze.py      # Analysis command implementation
+│   │   ├── analyze.py      # Analysis command implementation
+│   │   └── train.py        # Training command implementation
 │   ├── decorator/
 │   │   └── singleton.py    # Singleton decorator
 │   ├── service/
 │   │   ├── binance_service.py    # Binance API service
 │   │   ├── restful_service.py    # HTTP client service
-│   │   └── kline_service.py      # Kline data analysis service
+│   │   ├── kline_service.py      # Kline data analysis service
+│   │   └── training_service.py   # Model training service
 │   └── run.py              # Main CLI entry point
 ├── req.txt                 # Python dependencies
 └── README.md
