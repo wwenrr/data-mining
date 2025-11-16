@@ -69,6 +69,15 @@ class MarketStateService:
         frame.reset_index(drop=True, inplace=True)
         return {"data": data, "frame": frame}
 
+    def prepare_feature_dataset(self, crypto_name: str) -> Dict[str, Any]:
+        dataset = self._load_dataframe(crypto_name)
+        feature_payload = self._compute_features(dataset["frame"])
+        return {
+            "meta": dataset["data"],
+            "frame": feature_payload["frame"],
+            "columns": feature_payload["columns"],
+        }
+
     @staticmethod
     def _compute_features(frame: pd.DataFrame) -> Dict[str, Any]:
         df = frame.copy()
@@ -177,10 +186,10 @@ class MarketStateService:
         min_clusters: int = 2,
         max_clusters: int = 6,
     ) -> Dict[str, Any]:
-        dataset = self._load_dataframe(crypto_name)
-        feature_payload = self._compute_features(dataset["frame"])
-        feature_frame = feature_payload["frame"]
-        feature_cols = feature_payload["columns"]
+        feature_dataset = self.prepare_feature_dataset(crypto_name)
+        meta = feature_dataset["meta"]
+        feature_frame = feature_dataset["frame"]
+        feature_cols = feature_dataset["columns"]
 
         if feature_frame.empty:
             raise ModelTrainingError("Not enough data to compute features for training.")
@@ -198,8 +207,8 @@ class MarketStateService:
         cluster_labels = self._assign_labels(cluster_returns)
 
         model_payload = {
-            "symbol": dataset["data"]["symbol"],
-            "interval": dataset["data"]["interval"],
+            "symbol": meta["symbol"],
+            "interval": meta["interval"],
             "trained_at": datetime.utcnow().isoformat(),
             "n_clusters": cluster_count,
             "feature_columns": feature_cols,
@@ -210,12 +219,12 @@ class MarketStateService:
             "samples": len(feature_frame),
         }
 
-        path = self._model_path(dataset["data"]["symbol"], dataset["data"]["interval"])
+        path = self._model_path(meta["symbol"], meta["interval"])
         dump(model_payload, path)
 
         return {
-            "symbol": dataset["data"]["symbol"],
-            "interval": dataset["data"]["interval"],
+            "symbol": meta["symbol"],
+            "interval": meta["interval"],
             "n_clusters": cluster_count,
             "cluster_labels": cluster_labels,
             "cluster_returns": cluster_returns,
@@ -223,19 +232,18 @@ class MarketStateService:
             "samples": len(feature_frame),
         }
 
-    def predict_market_state(self, crypto_name: str) -> Dict[str, Any]:
-        dataset = self._load_dataframe(crypto_name)
-        symbol = dataset["data"]["symbol"]
-        interval = dataset["data"]["interval"]
-        path = self._model_path(symbol, interval)
+    def get_labeled_feature_dataset(self, crypto_name: str) -> Dict[str, Any]:
+        feature_dataset = self.prepare_feature_dataset(crypto_name)
+        meta = feature_dataset["meta"]
+        feature_frame = feature_dataset["frame"]
+        feature_cols = feature_dataset["columns"]
+
+        path = self._model_path(meta["symbol"], meta["interval"])
 
         if not path.exists():
-            raise MarketModelNotFoundError(f"No trained model found for {symbol} ({interval}).")
+            raise MarketModelNotFoundError(f"No trained model found for {meta['symbol']} ({meta['interval']}).")
 
         model_payload = load(path)
-        feature_payload = self._compute_features(dataset["frame"])
-        feature_frame = feature_payload["frame"]
-        feature_cols = feature_payload["columns"]
 
         if feature_frame.empty:
             raise ModelTrainingError("Not enough data to compute features for prediction.")
@@ -248,25 +256,40 @@ class MarketStateService:
         feature_frame = feature_frame.assign(cluster=predictions)
 
         cluster_labels = model_payload.get("cluster_labels", {})
-        feature_frame["state"] = feature_frame["cluster"].map(cluster_labels)
+        feature_frame["state"] = feature_frame["cluster"].map(cluster_labels).fillna("Unknown")
+
+        return {
+            "meta": meta,
+            "frame": feature_frame,
+            "feature_columns": feature_cols,
+            "cluster_labels": cluster_labels,
+            "model_payload": model_payload,
+            "model_path": str(path),
+        }
+
+    def predict_market_state(self, crypto_name: str) -> Dict[str, Any]:
+        labeled_dataset = self.get_labeled_feature_dataset(crypto_name)
+        feature_frame = labeled_dataset["frame"]
+        feature_cols = labeled_dataset["feature_columns"]
+        meta = labeled_dataset["meta"]
 
         latest = feature_frame.iloc[-1]
         latest_state = {
             "timestamp": latest["open_time"].isoformat(),
             "close": float(latest["close"]),
             "cluster": int(latest["cluster"]),
-            "state": latest["state"] or "Unknown",
+            "state": latest["state"],
             "features": {col: float(latest[col]) for col in feature_cols},
         }
 
-        state_counts = feature_frame["state"].fillna("Unlabeled").value_counts().to_dict()
+        state_counts = feature_frame["state"].value_counts().to_dict()
 
         return {
-            "symbol": symbol,
-            "interval": interval,
-            "n_clusters": model_payload["n_clusters"],
-            "cluster_labels": cluster_labels,
+            "symbol": meta["symbol"],
+            "interval": meta["interval"],
+            "n_clusters": labeled_dataset["model_payload"]["n_clusters"],
+            "cluster_labels": labeled_dataset["cluster_labels"],
             "latest_state": latest_state,
             "state_distribution": state_counts,
-            "model_path": str(path),
+            "model_path": labeled_dataset["model_path"],
         }
