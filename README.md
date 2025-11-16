@@ -14,6 +14,8 @@ A simple CLI tool to fetch cryptocurrency candlestick (kline) data from Binance 
   - [Analysis Commands](#analysis-commands)
   - [Training Commands](#training-commands)
   - [Market State Commands](#market-state-commands)
+  - [Classifier Training Commands](#classifier-training-commands)
+  - [Forecast Commands](#forecast-commands)
   - [Command Options](#command-options)
   - [Examples](#examples)
 - [Development](#development)
@@ -38,6 +40,7 @@ This tool provides a clean interface to fetch cryptocurrency market data from Bi
 - Clean CLI interface with detailed logging
 - Cross-platform support (Windows & Linux)
 - Trainable K-Means clustering to classify market states (Bullish/Bearish/Sideway)
+- RandomForest classifier to forecast the next market state
 
 ## Installation
 
@@ -124,9 +127,39 @@ Use the trained model to classify the latest data point into Bullish/Bearish/Sid
 ./scripts/linux/run market -c <CRYPTO> [--show-history]
 ```
 
-> Recommended workflow: fetch data with `dataset`, train the clustering model once with `train`, then re-run `market` whenever new klines are pulled.
->
-> Xem thêm hướng dẫn chi tiết tại `docs/market_state_guide.md`.
+### Classifier Training Commands
+
+Train a supervised RandomForest model to predict the next market state (requires a previously trained clustering model):
+
+**Windows:**
+
+```powershell
+.\scripts\win\run.ps1 train-classifier -c <CRYPTO> [--test-size 0.2] [--estimators 200]
+```
+
+**Linux:**
+
+```bash
+./scripts/linux/run train-classifier -c <CRYPTO> [--test-size 0.2] [--estimators 200]
+```
+
+### Forecast Commands
+
+Use the classifier to forecast the next state's label and probabilities:
+
+**Windows:**
+
+```powershell
+.\scripts\win\run.ps1 forecast -c <CRYPTO>
+```
+
+**Linux:**
+
+```bash
+./scripts/linux/run forecast -c <CRYPTO>
+```
+
+> Recommended workflow: fetch data with `dataset`, train the clustering model once with `train`, optionally train the classifier with `train-classifier`, then re-run `market` (current state) and `forecast` (next state) whenever new klines are pulled. Xem thêm hướng dẫn chi tiết tại `docs/market_state_guide.md`.
 
 ### Command Options
 
@@ -161,6 +194,21 @@ Use the trained model to classify the latest data point into Bullish/Bearish/Sid
 | `--crypto`     | `-c`  | Crypto name to classify with the trained model  | Yes      | -       |
 | `--show-history` | -   | Show JSON distribution of cluster assignments   | No       | False   |
 
+**Train-Classifier Command:**
+
+| Option         | Short | Description                                               | Required | Default |
+| -------------- | ----- | --------------------------------------------------------- | -------- | ------- |
+| `--crypto`     | `-c`  | Crypto name (requires a trained clustering model)         | Yes      | -       |
+| `--test-size`  | -     | Ratio used for evaluation split                           | No       | 0.2     |
+| `--estimators` | `-n`  | Number of trees in the RandomForest                       | No       | 200     |
+| `--max-depth`  | -     | Maximum depth per tree (use `None` for unrestricted)      | No       | None    |
+
+**Forecast Command:**
+
+| Option     | Short | Description                                       | Required | Default |
+| ---------- | ----- | ------------------------------------------------- | -------- | ------- |
+| `--crypto` | `-c`  | Crypto name to forecast using the classifier      | Yes      | -       |
+
 **Supported Intervals:**
 `1m`, `5m`, `15m`, `30m`, `1h`, `2h`, `4h`, `6h`, `8h`, `12h`, `1d`, `3d`, `1w`, `1M`
 
@@ -191,6 +239,12 @@ Use the trained model to classify the latest data point into Bullish/Bearish/Sid
 # Let the tool auto-select K (between 2 and 6) and detect the latest state
 .\scripts\win\run.ps1 train -c BTC
 .\scripts\win\run.ps1 market -c BTC --show-history
+
+# Train a RandomForest classifier to forecast the next state
+.\scripts\win\run.ps1 train-classifier -c BTC --test-size 0.3 --estimators 300
+
+# Forecast the next state with probability distribution
+.\scripts\win\run.ps1 forecast -c BTC
 ```
 
 **Analyzing Data:**
