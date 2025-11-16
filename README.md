@@ -12,6 +12,8 @@ A simple CLI tool to fetch cryptocurrency candlestick (kline) data from Binance 
 - [Usage](#usage)
   - [Dataset Commands](#dataset-commands)
   - [Analysis Commands](#analysis-commands)
+  - [Training Commands](#training-commands)
+  - [Market State Commands](#market-state-commands)
   - [Command Options](#command-options)
   - [Examples](#examples)
 - [Development](#development)
@@ -35,6 +37,7 @@ This tool provides a clean interface to fetch cryptocurrency market data from Bi
 - Time range analysis
 - Clean CLI interface with detailed logging
 - Cross-platform support (Windows & Linux)
+- Trainable K-Means clustering to classify market states (Bullish/Bearish/Sideway)
 
 ## Installation
 
@@ -89,6 +92,42 @@ Analyze saved cryptocurrency data:
 ./scripts/linux/run analyze -c <CRYPTO>
 ```
 
+### Training Commands
+
+Train a K-Means clustering model on the saved kline data (needed for market-state analysis):
+
+**Windows:**
+
+```powershell
+.\scripts\win\run.ps1 train -c <CRYPTO> [-k <CLUSTERS>] [--min-clusters 2 --max-clusters 6]
+```
+
+**Linux:**
+
+```bash
+./scripts/linux/run train -c <CRYPTO> [-k <CLUSTERS>] [--min-clusters 2 --max-clusters 6]
+```
+
+### Market State Commands
+
+Use the trained model to classify the latest data point into Bullish/Bearish/Sideway states:
+
+**Windows:**
+
+```powershell
+.\scripts\win\run.ps1 market -c <CRYPTO> [--show-history]
+```
+
+**Linux:**
+
+```bash
+./scripts/linux/run market -c <CRYPTO> [--show-history]
+```
+
+> Recommended workflow: fetch data with `dataset`, train the clustering model once with `train`, then re-run `market` whenever new klines are pulled.
+>
+> Xem thêm hướng dẫn chi tiết tại `docs/market_state_guide.md`.
+
 ### Command Options
 
 **Dataset Command:**
@@ -105,6 +144,22 @@ Analyze saved cryptocurrency data:
 | Option     | Short | Description                        | Required | Default |
 | ---------- | ----- | ---------------------------------- | -------- | ------- |
 | `--crypto` | `-c`  | Crypto name to analyze (e.g., BTC) | Yes      | -       |
+
+**Train Command:**
+
+| Option           | Short | Description                                         | Required | Default |
+| ---------------- | ----- | --------------------------------------------------- | -------- | ------- |
+| `--crypto`       | `-c`  | Crypto name to train (uses existing dataset)        | Yes      | -       |
+| `--clusters`     | `-k`  | Force a cluster count (auto-select if omitted)      | No       | -       |
+| `--min-clusters` | -     | Minimum K when auto-selecting (silhouette method)   | No       | 2       |
+| `--max-clusters` | -     | Maximum K when auto-selecting (silhouette method)   | No       | 6       |
+
+**Market Command:**
+
+| Option         | Short | Description                                     | Required | Default |
+| -------------- | ----- | ----------------------------------------------- | -------- | ------- |
+| `--crypto`     | `-c`  | Crypto name to classify with the trained model  | Yes      | -       |
+| `--show-history` | -   | Show JSON distribution of cluster assignments   | No       | False   |
 
 **Supported Intervals:**
 `1m`, `5m`, `15m`, `30m`, `1h`, `2h`, `4h`, `6h`, `8h`, `12h`, `1d`, `3d`, `1w`, `1M`
@@ -125,6 +180,17 @@ Analyze saved cryptocurrency data:
 
 # Get 10 daily candles for ADA/USDT from 30 days ago
 .\scripts\win\run.ps1 dataset -s ADAUSDT -i 1d -l 10 -d 30
+```
+
+**Training & Market-State Classification:**
+
+```powershell
+# Train a 3-cluster model for BTC using saved data
+.\scripts\win\run.ps1 train -c BTC -k 3
+
+# Let the tool auto-select K (between 2 and 6) and detect the latest state
+.\scripts\win\run.ps1 train -c BTC
+.\scripts\win\run.ps1 market -c BTC --show-history
 ```
 
 **Analyzing Data:**
